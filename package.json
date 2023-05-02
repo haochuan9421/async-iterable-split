@@ -1,0 +1,33 @@
+{
+  "name": "async-iterable-split",
+  "version": "1.0.0",
+  "description": "Split an async iterable (value is Uint8Array) into multiple sub async iterables by size, line or needle.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "link": "ln -s ../ ./node_modules/async-iterable-split",
+    "test": "node test/index.js"
+  },
+  "files": [
+    "./dist"
+  ],
+  "keywords": [
+    "async",
+    "iterable",
+    "split",
+    "readable",
+    "stream",
+    "parser",
+    "horspool",
+    "boyer-moore-horspool"
+  ],
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "author": "haochuan9421",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.4"
+  }
+}

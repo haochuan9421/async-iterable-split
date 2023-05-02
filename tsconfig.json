@@ -1,0 +1,17 @@
+{
+  "include": [
+    "src/**/*.ts"
+  ],
+  "compilerOptions": {
+    "outDir": "dist",
+    // 从 ES2018 版本开始才支持异步迭代器, forawaitof, Promise.prototype.finally 这些功能，所以这也是我们构建的最低目标版本
+    "target": "ES2018",
+    // 模块化方面我们只用到了 ES Modules 最基本的导入导出能力，所以设置为 ES6 即可
+    "module": "ES6",
+    // 模块加载方面，设置为 nodenext 是为了强制带 ".js" 后缀，这也是 Node.js 对加载 ES Modules 的强制要求
+    "moduleResolution": "nodenext",
+    "declaration": true,
+    "strict": true,
+    "removeComments": true,
+  },
+}
