@@ -26,6 +26,7 @@
     "node": ">=10.0.0"
   },
   "author": "haochuan9421",
+  "homepage": "https://github.com/haochuan9421/async-iterable-split",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.0.4"
