@@ -16,7 +16,7 @@ import { NeedleIterator } from "./sub-iterator/needle.js";
 // 3. spliter：
 // 实现了 AsyncIterator<Uint8Array, undefined> 接口，可以看做是一个迭代器，但它不直接向用户提供数据，而是作为原始迭代器的代理，起到数据缓冲层的作用，以及用于创建不同类型的子可迭代对象。
 
-// 4. 子可迭代对象：
+// 4. 子可迭代对象（subIterable）：
 // 类型是 AsyncIterable<Uint8Array>，用户可以使用 forawaitof 来迭代这个对象，迭代这个对象等效于迭代原始可迭代对象。
 // 每次迭代该对象获取到的都是原始数据中的一部分，同一个子可迭代对象可反复使用，但获取的数据不是同一部分，而是具备同一特征的不同部分。
 // 比如我们通过执行 spliter.splitByLine() 可以获取一个“行子可迭代对象”
@@ -29,7 +29,27 @@ import { NeedleIterator } from "./sub-iterator/needle.js";
 // 5. 子迭代器（subIterator）：
 // 类型是 AsyncIterator<Uint8Array, undefined>，通过调用子可迭代对象的 Symbol.asyncIterator 接口获取
 
-const hasValue = Symbol("hasValue");
+export function concat(chunks: Uint8Array[], length?: number) {
+  if (length === undefined) {
+    length = 0;
+    for (let i = 0; i < chunks.length; i++) {
+      length += chunks[i].length;
+    }
+  }
+
+  const concated = new Uint8Array(length);
+  let offset = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    if (offset === length) {
+      return concated;
+    }
+    const space = length - offset;
+    const chunk = space >= chunks[i].length ? chunks[i] : chunks[i].subarray(0, space);
+    concated.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return offset === length ? concated : concated.subarray(0, offset);
+}
 
 export class Spliter implements AsyncIterator<Uint8Array, undefined> {
   // 原始迭代器
@@ -43,29 +63,14 @@ export class Spliter implements AsyncIterator<Uint8Array, undefined> {
   // 用于标记原始迭代器是否还有数据，this.done 是同步的，this.hasValue 是异步的
   // 通过 (await this.hasValue) 可以准确判断原始迭代器是否还有数据，this.done 并不能准确反应这一状态
   // 因为即使原始迭代器已经结束了，也只有当再次调用 next 方法时 this.done 才会更新成 true，简单说就是“没结束”并不代表“有数据”
-  private [hasValue]?: Promise<boolean> = undefined;
   get hasValue() {
-    if (this[hasValue]) {
-      return this[hasValue];
-    }
-    return (this[hasValue] = new Promise<boolean>((resolve, reject) => {
-      if (this.done) {
-        resolve(false);
-      } else {
-        this.next()
-          .then((item) => {
-            if (item.done) {
-              resolve(false);
-            } else {
-              this.remain = item.value;
-              resolve(true);
-            }
-          })
-          .catch(reject);
+    return this.next().then((item) => {
+      if (item.done) {
+        return false;
       }
-    }).finally(() => {
-      this[hasValue] = undefined;
-    }));
+      this.remain = item.value;
+      return true;
+    });
   }
 
   constructor(rawIterable: AsyncIterable<Uint8Array>) {
@@ -166,5 +171,40 @@ export class Spliter implements AsyncIterator<Uint8Array, undefined> {
         },
       }),
     };
+  }
+
+  async readLine(maxSize: number = Infinity) {
+    const chunks = [];
+    const subIterable = this.splitByLine();
+    let total = 0;
+    for await (const chunk of subIterable) {
+      if ((total += chunk.length) > maxSize) {
+        throw new Error(`Size exceeded ${maxSize} bytes`);
+      }
+      chunks.push(chunk);
+    }
+    return concat(chunks, total);
+  }
+
+  async readSize(size: number) {
+    const chunks = [];
+    const subIterable = this.splitBySize(size);
+    for await (const chunk of subIterable) {
+      chunks.push(chunk);
+    }
+    return concat(chunks);
+  }
+
+  async readBeforeNeedle(needle: Uint8Array, maxSize: number = Infinity) {
+    const chunks = [];
+    const subIterable = this.splitByNeedle(needle);
+    let total = 0;
+    for await (const chunk of subIterable) {
+      if ((total += chunk.length) > maxSize) {
+        throw new Error(`Size exceeded ${maxSize} bytes`);
+      }
+      chunks.push(chunk);
+    }
+    return concat(chunks, total);
   }
 }
