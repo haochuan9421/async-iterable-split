@@ -207,4 +207,13 @@ export class Spliter implements AsyncIterator<Uint8Array, undefined> {
     }
     return concat(chunks, total);
   }
+
+  // 不同于 readSize 的地方在于，当获取到的数据不足 size 大小时会抛出错误，这种情况只会发生在还未获取到足够大小的数据时，原可迭代对象就结束了的时候
+  async readEnoughSize(size: number) {
+    const concated = await this.readSize(size);
+    if (concated.length !== size) {
+      throw new Error("Don't have enough size of data");
+    }
+    return concated;
+  }
 }
