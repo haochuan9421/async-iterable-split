@@ -1,4 +1,4 @@
-import { Spliter } from "async-iterable-split";
+import { Splitable } from "async-iterable-split";
 
 // 测试换行符不在尾部的情况，这种情况下根据换行符拆分区块，区块的数量应该等于（换行符的数量 + 1），就像一刀下去一条绳子会被切成二段一样
 export async function lineBreakNotAtTail() {
@@ -33,13 +33,13 @@ export async function lineBreakNotAtTail() {
     },
   };
 
-  const spliter = new Spliter(iterable);
-  const line = spliter.splitByLine();
+  const splitable = new Splitable(iterable);
+  const subIterable = splitable.splitLine();
 
   let chunkCount = 0;
 
-  while (await spliter.hasValue) {
-    for await (const item of line) {
+  while (await splitable.hasValue) {
+    for await (const item of subIterable) {
     }
     chunkCount++;
   }
@@ -86,13 +86,13 @@ export async function lineBreakAtTail() {
     },
   };
 
-  const spliter = new Spliter(iterable);
-  const lineIterable = spliter.splitByLine();
+  const splitable = new Splitable(iterable);
+  const subIterable = splitable.splitLine();
 
   let chunkCount = 0;
 
-  while (await spliter.hasValue) {
-    for await (const item of lineIterable) {
+  while (await splitable.hasValue) {
+    for await (const item of subIterable) {
     }
     chunkCount++;
   }

@@ -1,19 +1,20 @@
-import { Spliter } from "../index.js";
+import { Splitable } from "../index.js";
 
 export abstract class SubIterator implements AsyncIterator<Uint8Array, undefined> {
   abstract next(): Promise<IteratorResult<Uint8Array>>;
-  return: Spliter["return"];
-  throw: Spliter["throw"];
+  return: Splitable["return"];
+  throw: Splitable["throw"];
 
   done: boolean;
-  spliter: Spliter;
+  splitable: Splitable;
 
-  constructor(spliter: Spliter) {
-    this.return = spliter.return.bind(spliter);
-    this.throw = spliter.throw.bind(spliter);
+  constructor(splitable: Splitable) {
+    this.return = splitable.return.bind(splitable);
+    this.throw = splitable.throw.bind(splitable);
 
     this.done = false;
-    this.spliter = spliter;
+    this.splitable = splitable;
+    this.splitable.subIterators.add(this);
   }
 
   end() {
@@ -21,6 +22,6 @@ export abstract class SubIterator implements AsyncIterator<Uint8Array, undefined
       return;
     }
     this.done = true;
-    this.spliter.subIterator = undefined;
+    this.splitable.subIterators.delete(this);
   }
 }

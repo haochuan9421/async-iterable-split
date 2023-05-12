@@ -1,12 +1,12 @@
 import { SubIterator } from "./index.js";
-import { Spliter } from "../index.js";
+import { Splitable } from "../index.js";
 
 export class SizeIterator extends SubIterator {
   // 用于记录还有多少可用空间
   space: number;
 
-  constructor(spliter: Spliter, size: number) {
-    super(spliter);
+  constructor(splitable: Splitable, size: number) {
+    super(splitable);
     this.space = size;
   }
 
@@ -15,19 +15,7 @@ export class SizeIterator extends SubIterator {
       return { done: true, value: undefined };
     }
 
-    if (this.spliter.subIterator === undefined) {
-      this.spliter.subIterator = this;
-    } else if (this.spliter.subIterator !== this) {
-      this.end();
-      return this.spliter
-        .return()
-        .catch(() => {
-          /* 我们需要抛出自己的错误 */
-        })
-        .then(() => Promise.reject(new Error("Can't iterate multiple sub-iteratable in parallel")));
-    }
-
-    return this.spliter.next().then((item) => {
+    return this.splitable.next().then((item) => {
       if (item.done) {
         this.end();
         return item;
@@ -39,7 +27,7 @@ export class SizeIterator extends SubIterator {
       }
 
       this.end();
-      this.spliter.remain = item.value.subarray(this.space);
+      this.splitable.remain = item.value.subarray(this.space);
       return { done: false, value: item.value.subarray(0, this.space) };
     });
   }

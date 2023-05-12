@@ -1,4 +1,4 @@
-import { Spliter } from "async-iterable-split";
+import { Splitable } from "async-iterable-split";
 
 // 测试数据总大小是块大小的整数倍的场景，这种情况下根据大小拆分区块，块的数量必然是（总大小 / 块大小）
 export async function integerMultiple() {
@@ -21,12 +21,12 @@ export async function integerMultiple() {
     },
   };
 
-  const spliter = new Spliter(iterable);
-  const chunk = spliter.splitBySize(chunkSize);
+  const splitable = new Splitable(iterable);
+  const subIterable = splitable.splitSize(chunkSize);
 
-  while (await spliter.hasValue) {
+  while (await splitable.hasValue) {
     let size = 0;
-    for await (const item of chunk) {
+    for await (const item of subIterable) {
       size += item.length;
     }
     if (size !== chunkSize) {
@@ -61,11 +61,11 @@ export async function notIntegerMultiple() {
     },
   };
 
-  const spliter = new Spliter(iterable);
-  const chunk = spliter.splitBySize(chunkSize);
+  const splitable = new Splitable(iterable);
+  const subIterable = splitable.splitSize(chunkSize);
 
-  while (await spliter.hasValue) {
-    for await (const item of chunk) {
+  while (await splitable.hasValue) {
+    for await (const item of subIterable) {
     }
     chunkCount++;
   }
