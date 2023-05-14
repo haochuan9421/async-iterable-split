@@ -51,6 +51,18 @@ export function concat(chunks: Uint8Array[], length?: number): Uint8Array {
   return concated;
 }
 
+export async function asyncConcat(iterable: AsyncIterable<Uint8Array>, maxSize: number = Infinity): Promise<Uint8Array> {
+  let chunks = [];
+  let total = 0;
+  for await (const chunk of iterable) {
+    if ((total += chunk.length) > maxSize) {
+      throw new Error(`Size exceeded ${maxSize} bytes`);
+    }
+    chunks.push(chunk);
+  }
+  return concat(chunks, total);
+}
+
 export class Splitable implements AsyncIterator<Uint8Array, undefined> {
   // 原始迭代器
   rawIterator: AsyncIterator<Uint8Array, undefined>;
@@ -186,73 +198,32 @@ export class Splitable implements AsyncIterator<Uint8Array, undefined> {
     };
   }
 
-  async readLine(maxSize: number = Infinity): Promise<Uint8Array> {
-    const chunks = [];
-    const subIterable = this.splitLine();
-    let total = 0;
-    for await (const chunk of subIterable) {
-      if ((total += chunk.length) > maxSize) {
-        throw new Error(`Size exceeded ${maxSize} bytes`);
-      }
-      chunks.push(chunk);
-    }
-    return concat(chunks, total);
+  readLine(maxSize: number = Infinity): Promise<Uint8Array> {
+    return asyncConcat(this.splitLine(), maxSize);
   }
 
-  async readSize(size: number): Promise<Uint8Array> {
-    const chunks = [];
-    const subIterable = this.splitSize(size);
-    for await (const chunk of subIterable) {
-      chunks.push(chunk);
-    }
-    return concat(chunks);
+  readSize(size: number): Promise<Uint8Array> {
+    return asyncConcat(this.splitSize(size));
   }
 
   // 不同于 readSize 的地方在于，当获取到的数据不足 size 大小时会抛出错误，这种情况只会发生在还未获取到足够大小的数据时，原可迭代对象就结束了的时候
   async readEnoughSize(size: number): Promise<Uint8Array> {
-    const concated = await this.readSize(size);
-    if (concated.length !== size) {
+    const concated = await asyncConcat(this.splitSize(size));
+    if (concated.length < size) {
       throw new Error("Don't have enough size of data");
     }
     return concated;
   }
 
-  async readBeforeNeedle(needle: Uint8Array, maxSize: number = Infinity): Promise<Uint8Array> {
-    const chunks = [];
-    const subIterable = this.splitBeforeNeedle(needle);
-    let total = 0;
-    for await (const chunk of subIterable) {
-      if ((total += chunk.length) > maxSize) {
-        throw new Error(`Size exceeded ${maxSize} bytes`);
-      }
-      chunks.push(chunk);
-    }
-    return concat(chunks, total);
+  readBeforeNeedle(needle: Uint8Array, maxSize: number = Infinity): Promise<Uint8Array> {
+    return asyncConcat(this.splitBeforeNeedle(needle), maxSize);
   }
 
-  async readChunkedHTTPBody(maxSize: number = Infinity): Promise<Uint8Array> {
-    const chunks = [];
-    const subIterable = this.splitChunkedHTTPBody();
-    let total = 0;
-    for await (const chunk of subIterable) {
-      if ((total += chunk.length) > maxSize) {
-        throw new Error(`Size exceeded ${maxSize} bytes`);
-      }
-      chunks.push(chunk);
-    }
-    return concat(chunks, total);
+  readChunkedHTTPBody(maxSize: number = Infinity): Promise<Uint8Array> {
+    return asyncConcat(this.splitChunkedHTTPBody(), maxSize);
   }
 
-  async readChunkedStream(maxSize: number = Infinity): Promise<Uint8Array> {
-    const chunks = [];
-    const subIterable = this.splitChunkedStream();
-    let total = 0;
-    for await (const chunk of subIterable) {
-      if ((total += chunk.length) > maxSize) {
-        throw new Error(`Size exceeded ${maxSize} bytes`);
-      }
-      chunks.push(chunk);
-    }
-    return concat(chunks, total);
+  readChunkedStream(maxSize: number = Infinity): Promise<Uint8Array> {
+    return asyncConcat(this.splitChunkedStream(), maxSize);
   }
 }
