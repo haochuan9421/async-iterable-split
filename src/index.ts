@@ -31,36 +31,30 @@ import { ChunkedStreamIterator } from "./sub-iterator/chunked-stream.js";
 // 5. 子迭代器（subIterator）：
 // 类型是 AsyncIterator<Uint8Array, undefined>，通过调用子可迭代对象的 Symbol.asyncIterator 接口获取
 
-export function concat(chunks: Uint8Array[], length?: number): Uint8Array {
-  if (chunks.length === 0) {
-    return new Uint8Array();
+export function concat(iterable: Iterable<Uint8Array>): Uint8Array {
+  const chunks = Array.isArray(iterable) ? iterable : Array.from(iterable);
+  let size = 0;
+  for (let i = 0; i < chunks.length; i++) {
+    size += chunks[i].length;
   }
-
-  if (chunks.length === 1) {
-    return length === undefined ? chunks[0] : chunks[0].subarray(0, length);
-  }
-
-  const total = chunks.reduce((sum, chunk) => (sum += chunk.length), 0);
-  const concated = new Uint8Array(length === undefined ? total : Math.min(total, length));
-  for (let i = 0, offset = 0; i < chunks.length && offset < concated.length; i++) {
-    const space = concated.length - offset;
-    const chunk = space >= chunks[i].length ? chunks[i] : chunks[i].subarray(0, space);
-    concated.set(chunk, offset);
-    offset += chunk.length;
+  const concated = new Uint8Array(size);
+  for (let i = 0, offset = 0; i < chunks.length; i++) {
+    concated.set(chunks[i], offset);
+    offset += chunks[i].length;
   }
   return concated;
 }
 
 export async function asyncConcat(iterable: AsyncIterable<Uint8Array>, maxSize: number = Infinity): Promise<Uint8Array> {
   let chunks = [];
-  let total = 0;
+  let size = 0;
   for await (const chunk of iterable) {
-    if ((total += chunk.length) > maxSize) {
+    if ((size += chunk.length) > maxSize) {
       throw new Error(`Size exceeded ${maxSize} bytes`);
     }
     chunks.push(chunk);
   }
-  return concat(chunks, total);
+  return concat(chunks);
 }
 
 export class Splitable implements AsyncIterator<Uint8Array, undefined> {
