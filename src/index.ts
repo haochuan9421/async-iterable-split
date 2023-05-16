@@ -45,6 +45,27 @@ export function concat(iterable: Iterable<Uint8Array>): Uint8Array {
   return concated;
 }
 
+export function createSplitable(source: Uint8Array | Iterable<Uint8Array> | AsyncIterable<Uint8Array>): Splitable {
+  if (Symbol.asyncIterator in source) {
+    return new Splitable(source);
+  }
+  const array = source instanceof Uint8Array ? [source] : Array.from(source);
+
+  return new Splitable({
+    [Symbol.asyncIterator]() {
+      let index = 0;
+      return {
+        async next() {
+          if (index === array.length) {
+            return { done: true, value: undefined };
+          }
+          return { done: false, value: array[index++] };
+        },
+      };
+    },
+  });
+}
+
 export async function asyncConcat(iterable: AsyncIterable<Uint8Array>, maxSize: number = Infinity): Promise<Uint8Array> {
   let chunks = [];
   let size = 0;

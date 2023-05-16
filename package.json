@@ -1,6 +1,6 @@
 {
   "name": "async-iterable-split",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Split an async iterable (value is Uint8Array) into multiple \"sub async iterable\"s by size, line or needle.",
   "type": "module",
   "main": "./dist/index.js",
