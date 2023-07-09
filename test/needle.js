@@ -22,14 +22,14 @@ export async function helloworld() {
   {
     const needle = encoder.encode("o");
     const splitable = new Splitable(iterable);
-    const subIterable = splitable.splitBeforeNeedle(needle);
 
     const expect = ["hell", " w", "rld"];
     const result = [];
 
-    while (await splitable.hasValue) {
+    while (await splitable.hasValue()) {
+      const subIterator = splitable.splitBeforeNeedle(needle);
       let str = "";
-      for await (const item of subIterable) {
+      for await (const item of subIterator) {
         str += decoder.decode(item, { stream: true });
       }
       result.push(str);
@@ -48,14 +48,14 @@ export async function helloworld() {
   {
     const needle = encoder.encode("l");
     const splitable = new Splitable(iterable);
-    const subIterable = splitable.splitBeforeNeedle(needle);
 
     const expect = ["he", "", "o wor", "d"];
     const result = [];
 
-    while (await splitable.hasValue) {
+    while (await splitable.hasValue()) {
+      const subIterator = splitable.splitBeforeNeedle(needle);
       let str = "";
-      for await (const item of subIterable) {
+      for await (const item of subIterator) {
         str += decoder.decode(item, { stream: true });
       }
       result.push(str);
@@ -74,14 +74,14 @@ export async function helloworld() {
   {
     const needle = encoder.encode("world");
     const splitable = new Splitable(iterable);
-    const subIterable = splitable.splitBeforeNeedle(needle);
 
     const expect = ["hello "];
     const result = [];
 
-    while (await splitable.hasValue) {
+    while (await splitable.hasValue()) {
+      const subIterator = splitable.splitBeforeNeedle(needle);
       let str = "";
-      for await (const item of subIterable) {
+      for await (const item of subIterator) {
         str += decoder.decode(item, { stream: true });
       }
       result.push(str);
@@ -132,12 +132,12 @@ export async function needleNotAtTail() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitBeforeNeedle(needle);
 
   let chunkCount = 0;
 
-  while (await splitable.hasValue) {
-    for await (const item of subIterable) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitBeforeNeedle(needle);
+    for await (const item of subIterator) {
     }
     chunkCount++;
   }
@@ -186,12 +186,12 @@ export async function needleAtTail() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitBeforeNeedle(needle);
 
   let chunkCount = 0;
 
-  while (await splitable.hasValue) {
-    for await (const item of subIterable) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitBeforeNeedle(needle);
+    for await (const item of subIterator) {
     }
     chunkCount++;
   }

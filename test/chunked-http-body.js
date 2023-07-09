@@ -28,11 +28,11 @@ export async function chunkedHTTPBody() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitChunkedHTTPBody();
+  const subIterator = splitable.splitChunkedHTTPBody();
 
   let decoded = "";
   const decoder = new TextDecoder();
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     decoded += decoder.decode(chunk, { stream: true });
   }
 

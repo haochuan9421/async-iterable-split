@@ -11,7 +11,7 @@
 
 ---
 
-> Split an [async iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols) (value is Uint8Array) into multiple "sub async iterable"s by line, size or needle.
+> Split an [async iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols) (value is Uint8Array) into multiple "sub async iterable(iterator)"s by line, size or needle.
 
 ## Installation
 
@@ -37,11 +37,11 @@ import { Splitable } from "async-iterable-split";
 
 const iterable = createReadStream("./foo.txt"); // Node.js readable stream is async iterable (since v10.0.0)
 const splitable = new Splitable(iterable); // Any object that deploys the [Symbol.asyncIterator] interface can be used as a parameter for instantiating Splitable
-const subIterable = splitable.splitLine(); // Create a "sub async iterable", all the data iterated from this object in each round is a row of the original
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitLine(); // Create a "sub async iterable(iterator)", all the data iterated from this object is one row of the original
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   // When the "for await of" loop exits, all the data of a row will be iterated out
@@ -64,7 +64,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const line = await splitable.readLine(); // Type of "line" is Uint8Array
   console.dir(Buffer.from(line).toString("utf-8"));
 }
@@ -85,11 +85,11 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-const subIterable = splitable.splitSize(10); // Create a "sub async iterable", all the data iterated from this object in each round is 10 bytes data of the original
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitSize(10); // Create a "sub async iterable(iterator)", all the data iterated from this object is 10 bytes of the original
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   console.dir(Buffer.concat(chunks).toString("utf-8"));
@@ -111,7 +111,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const part = await splitable.readSize(10);
   console.dir(Buffer.from(part).toString("utf-8"));
 }
@@ -130,11 +130,11 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-const subIterable = splitable.splitBeforeNeedle(Buffer.from("ba")); // Create a "sub async iterable", all the data iterated from this object in each round is data before "ba" of the original
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitBeforeNeedle(Buffer.from("ba")); // Create a "sub async iterable(iterator)", all the data iterated from this object is data before "ba" of the original
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   console.dir(Buffer.concat(chunks).toString("utf-8"));
@@ -156,7 +156,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const part = await splitable.readBeforeNeedle(Buffer.from("ba"));
   console.dir(Buffer.from(part).toString("utf-8"));
 }
@@ -164,7 +164,7 @@ while (await splitable.hasValue) {
 
 ### 4. Cross-use
 
-The above three splitting way can be used alone or cross-used. The following is an example of parsing an HTTP request message, there are parts split by line and parts split by size:
+The above three splitting methods can be used alone or cross-used. The following is an example of parsing an HTTP request message, there are parts split by line and parts split by size:
 
 **Server**:
 
@@ -172,18 +172,18 @@ The above three splitting way can be used alone or cross-used. The following is 
 import { createServer } from "node:net";
 import { Splitable } from "async-iterable-split";
 
-const server = createServer((socket) => {
-  (async () => {
-    // Node.js socket is also async iterable
+const server = createServer(async (socket) => {
+  try {
+    // Node.js TCP socket is also async iterable
     const splitable = new Splitable(socket);
-    while (await splitable.hasValue) {
+    while (await splitable.hasValue()) {
       // httpReqParser will parses one HTTP request message at a time, one TCP connection may contain multiple HTTP messages
       console.log(await httpReqParser(splitable));
     }
-  })().catch((error) => {
+  } catch (error) {
     console.log("got error", error);
     socket.destroy(error);
-  });
+  }
 }).listen(8888, "127.0.0.1", () => {
   console.log(server.address());
 });
@@ -202,7 +202,7 @@ async function httpReqParser(splitable) {
   // Parse the request headers, limit the size of a single request header to 16384 bytes, and limit the count of request headers to 256
   reqMsg.headers = {};
   let headerCount = 0;
-  while (await splitable.hasValue) {
+  while (await splitable.hasValue()) {
     if (headerCount > 256) {
       throw new Error("header count exceeded limit");
     }
@@ -274,15 +274,17 @@ The server output looks like this:
 
 ## Cautions
 
-1. The "sub async iterable" created by `splitLine`, `splitSize` or `splitBeforeNeedle` methods cannot be iterated at the same time. You must wait for the previous round of iteration to end before starting a new round of iteration. The same "sub async iterable" can be used repeatedly, but the data obtained in each round of iteration is not the same part of the original, but a different part with the same characteristics.
+1. The "sub async iterable(iterator)" created by `splitXXX` methods cannot be iterated at the same time. You must wait for the previous round of iteration to end before starting a new round of iteration.
 
-2. When calling `readLine`, `readSize` or `readBeforeNeedle` methods, the corresponding "sub async iterable" will be automatically created and iterated immediately. The iterated data will be temporarily stored in memory. When the iteration ends, All data chunks will be concated into one data chunk and `resolve` out. It is recommended to set a reasonable size limit to avoid memory leaks.
+2. When calling `readXXX` methods, the corresponding "sub async iterable(iterator)" will be automatically created and iterated immediately. The iterated data will be temporarily stored in memory. When the iteration ends, All data chunks will be concated into one data chunk and `resolve` out. It is recommended to set a reasonable size limit to avoid memory leaks.
 
-3. `splitable.hasValue` is a `getter`, the value is a `Promise` instance, if it `resolve` the `true`, it means that the original iterable still has data, otherwise it means that there is no data. The value cannot be retrieved again while it is in `pending` state, or a "sub async iterable" is iterating.
+3. `splitable.hasValue()` is used to check if any data can be iterated out，this method is asynchronous. It cannot be called again while it is in `pending` state, or a "sub async iterable(iterator)" is iterating.
+
+4. After a "sub async iterable(iterator)" is done, if you want to get the remaining original data, you can directly iterate the splitable, it's also an async iterable(iterator).
 
 ---
 
-> 将一个“[异步可迭代对象](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols)”（值为 Uint8Array）按行、大小或 `needle` 拆分成多个“子异步可迭代对象”。
+> 将一个“[异步可迭代对象](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_async_iterator_and_async_iterable_protocols)”（值为 Uint8Array）按行、大小或 `needle` 拆分成多个“子异步可迭代对象（迭代器）”。
 
 ## 安装
 
@@ -308,11 +310,11 @@ import { Splitable } from "async-iterable-split";
 
 const iterable = createReadStream("./foo.txt"); // Node.js 的可读流是异步可迭代对象（从 v10.0.0 开始）
 const splitable = new Splitable(iterable); // 任何部署了 [Symbol.asyncIterator] 接口的对象，都可以作为实例化 Splitable 的参数
-const subIterable = splitable.splitLine(); // 创建一个“子异步可迭代对象”，该对象每轮迭代出的全部数据是原始数据中的一行
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitLine(); // 创建一个“子异步可迭代对象（迭代器）”，该对象迭代出的全部数据是原始数据中的一行
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   // 当 for await of 循环退出时，一行的数据就全部迭代出来了
@@ -335,7 +337,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const line = await splitable.readLine(); // "line" 的类型是 Uint8Array
   console.dir(Buffer.from(line).toString("utf-8"));
 }
@@ -356,11 +358,11 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-const subIterable = splitable.splitSize(10); // 创建一个子异步可迭代对象，该对象每轮迭代出的全部数据是原始数据中的 10 个字节
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitSize(10); // 创建一个子异步可迭代对象（迭代器），该对象迭代出的全部数据是原始数据中的 10 个字节
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   console.dir(Buffer.concat(chunks).toString("utf-8"));
@@ -382,7 +384,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const part = await splitable.readSize(10);
   console.dir(Buffer.from(part).toString("utf-8"));
 }
@@ -401,11 +403,11 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-const subIterable = splitable.splitBeforeNeedle(Buffer.from("ba")); // 创建一个子异步可迭代对象，该对象每轮迭代出的数据是原始数据中 "ba" 前面的部分
 
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
+  const subIterator = splitable.splitBeforeNeedle(Buffer.from("ba")); // 创建一个子异步可迭代对象（迭代器），该对象迭代出的数据是原始数据中 "ba" 前面的部分
   const chunks = [];
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     chunks.push(chunk);
   }
   console.dir(Buffer.concat(chunks).toString("utf-8"));
@@ -427,7 +429,7 @@ import { createReadStream } from "node:fs";
 import { Splitable } from "async-iterable-split";
 
 const splitable = new Splitable(createReadStream("./foo.txt"));
-while (await splitable.hasValue) {
+while (await splitable.hasValue()) {
   const part = await splitable.readBeforeNeedle(Buffer.from("ba"));
   console.dir(Buffer.from(part).toString("utf-8"));
 }
@@ -443,18 +445,18 @@ while (await splitable.hasValue) {
 import { createServer } from "node:net";
 import { Splitable } from "async-iterable-split";
 
-const server = createServer((socket) => {
-  (async () => {
-    // Node.js 中的 socket 也是异步可迭代对象
+const server = createServer(async (socket) => {
+  try {
+    // Node.js 中的 TCP socket 也是异步可迭代对象
     const splitable = new Splitable(socket);
-    while (await splitable.hasValue) {
+    while (await splitable.hasValue()) {
       // httpReqParser 每次解析一个 HTTP 请求报文，一个 TCP 连接可能包含多个 HTTP 报文
       console.log(await httpReqParser(splitable));
     }
-  })().catch((error) => {
+  } catch (error) {
     console.log("got error", error);
     socket.destroy(error);
-  });
+  }
 }).listen(8888, "127.0.0.1", () => {
   console.log(server.address());
 });
@@ -473,7 +475,7 @@ async function httpReqParser(splitable) {
   // 解析请求头，将单个请求头大小限制在 16384 个字节以内，请求头个数限制在 256 个以内
   reqMsg.headers = {};
   let headerCount = 0;
-  while (await splitable.hasValue) {
+  while (await splitable.hasValue()) {
     if (headerCount > 256) {
       throw new Error("header count exceeded limit");
     }
@@ -545,8 +547,10 @@ Content-Length: 8
 
 ## 注意事项
 
-1. 通过 `splitLine`，`splitSize` 或 `splitBeforeNeedle` 方法创建的“子异步可迭代对象”不能被同时迭代，必须等前一轮迭代结束了，才能开启新的一轮迭代。同一个“子异步可迭代对象”可反复使用，但每轮迭代出的数据并不是原始数据中的同一个部分，而是具备同一个特性的不同部分。
+1. 通过 `splitXXX` 方法创建的“子异步可迭代对象（迭代器）”不能被同时迭代，必须等前一轮迭代结束了，才能开启新的一轮迭代。
 
-2. 调用 `readLine`，`readSize` 或 `readBeforeNeedle` 方法时会自动创建对应的“子异步可迭代对象”并立即对其进行迭代，迭代出的数据会暂存在内存中，当迭代结束时，会将所有数据块合并成一个完整的数据块 `resolve` 出来。建议使用这些方法时设置一个合理的大小限制，避免内存泄漏。
+2. 调用 `readXXX` 方法时会自动创建对应的“子异步可迭代对象（迭代器）”并立即对其进行迭代，迭代出的数据会暂存在内存中，当迭代结束时，会将所有数据块合并成一个完整的数据块 `resolve` 出来。建议使用这些方法时设置一个合理的大小限制，避免内存泄漏。
 
-3. `splitable.hasValue` 是一个 `getter`，值是 `Promise` 实例，如果它 `resolve` 了 `true`，则代表原始可迭代对象还有数据，反之则代表没有数据了。当它处于 `pending` 状态时不可再次获取该值，亦不可迭代“子异步可迭代对象”。
+3. `splitable.hasValue()` 用于判断是否还可以迭代出数据，该方法是异步的。当它处于 `pending` 状态时不可再次调用，亦不可迭代“子异步可迭代对象（迭代器）”。
+
+4. 当迭代完某个“子异步可迭代对象（迭代器）”后，如果想获取剩余的原始数据，可以直接迭代 splitable，它也是一个异步可迭代对象（迭代器）。

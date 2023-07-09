@@ -19,7 +19,7 @@ export async function chunkedStream() {
           const data = new TextEncoder().encode(chunk);
           if (data.length) {
             const dv = new DataView(new ArrayBuffer(4));
-            dv.setInt32(0, data.length, false);
+            dv.setUint32(0, data.length, false);
             const size = new Uint8Array(dv.buffer);
             return { done: false, value: concat([size, data]) };
           }
@@ -30,11 +30,11 @@ export async function chunkedStream() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitChunkedStream();
+  const subIterator = splitable.splitChunkedStream();
 
   let decoded = "";
   const decoder = new TextDecoder();
-  for await (const chunk of subIterable) {
+  for await (const chunk of subIterator) {
     decoded += decoder.decode(chunk, { stream: true });
   }
 

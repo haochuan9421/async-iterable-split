@@ -22,11 +22,11 @@ export async function integerMultiple() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitSize(chunkSize);
 
-  while (await splitable.hasValue) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitSize(chunkSize);
     let size = 0;
-    for await (const item of subIterable) {
+    for await (const item of subIterator) {
       size += item.length;
     }
     if (size !== chunkSize) {
@@ -62,10 +62,10 @@ export async function notIntegerMultiple() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitSize(chunkSize);
 
-  while (await splitable.hasValue) {
-    for await (const item of subIterable) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitSize(chunkSize);
+    for await (const item of subIterator) {
     }
     chunkCount++;
   }

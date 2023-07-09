@@ -34,12 +34,12 @@ export async function lineBreakNotAtTail() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitLine();
 
   let chunkCount = 0;
 
-  while (await splitable.hasValue) {
-    for await (const item of subIterable) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitLine();
+    for await (const item of subIterator) {
     }
     chunkCount++;
   }
@@ -87,12 +87,12 @@ export async function lineBreakAtTail() {
   };
 
   const splitable = new Splitable(iterable);
-  const subIterable = splitable.splitLine();
 
   let chunkCount = 0;
 
-  while (await splitable.hasValue) {
-    for await (const item of subIterable) {
+  while (await splitable.hasValue()) {
+    const subIterator = splitable.splitLine();
+    for await (const item of subIterator) {
     }
     chunkCount++;
   }
