@@ -543,8 +543,8 @@ export class Splitable implements AsyncIterableIterator<Uint8Array> {
     return asyncConcat(this.splitChunkedHTTPBody(), maxSize);
   }
 
-  async readChunkedStream(maxSize: number = Infinity): Promise<Uint8Array> {
-    return asyncConcat(this.splitChunkedStream(), maxSize);
+  async readChunkedStream(littleEndian: boolean = false, maxSize: number = Infinity): Promise<Uint8Array> {
+    return asyncConcat(this.splitChunkedStream(littleEndian), maxSize);
   }
 
   // 提前加载至少 expect 字节的数据
