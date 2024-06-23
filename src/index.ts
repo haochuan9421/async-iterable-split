@@ -31,14 +31,15 @@ export function concat(iterable: Iterable<Uint8Array>): Uint8Array {
   return concated;
 }
 
-export async function asyncConcat(iterable: AsyncIterable<Uint8Array>, maxSize: number = Infinity): Promise<Uint8Array> {
+export async function asyncConcat(iterable: AsyncIterableIterator<Uint8Array>, maxSize: number = Infinity): Promise<Uint8Array> {
   let chunks = [];
   let size = 0;
-  for await (const chunk of iterable) {
-    if ((size += chunk.length) > maxSize) {
+  let item;
+  while (!(item = await iterable.next()).done) {
+    if ((size += item.value.length) > maxSize) {
       throw new Error(`Size exceeded ${maxSize} bytes`);
     }
-    chunks.push(chunk);
+    chunks.push(item.value);
   }
   return concat(chunks);
 }
@@ -416,7 +417,7 @@ export class Splitable implements AsyncIterableIterator<Uint8Array> {
           chunkIterator = splitable.splitSize(chunkSize);
         }
 
-        const item = await chunkIterator!.next();
+        const item = await chunkIterator.next();
         if (!item.done) {
           chunkRealSize += item.value.length;
           return item;
@@ -481,7 +482,7 @@ export class Splitable implements AsyncIterableIterator<Uint8Array> {
           chunkIterator = splitable.splitSize(chunkSize);
         }
 
-        const item = await chunkIterator!.next();
+        const item = await chunkIterator.next();
         if (!item.done) {
           chunkRealSize += item.value.length;
           return item;
